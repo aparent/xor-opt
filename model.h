@@ -8,6 +8,7 @@
 #include <regex>
 #include <algorithm>
 #include <igraph/igraph.h>
+#include <cassert>
 
 class Model
 {
@@ -22,7 +23,7 @@ public:
             : inputs(_inputs) , output(_output) , exps(_exps) {}
         std::string display_str();
     private:
-
+        bool areExclusive (const std::vector<Gate_Cell>&,const std::vector<Gate_Cell>&);
         std::vector<std::string> inputs;
         std::string output;
         std::vector<std::vector<Gate_Cell> > exps;
@@ -113,6 +114,20 @@ std::string Model::display_str()
     return output;
 }
 
+
+
+
+bool Model::Gate::areExclusive  (const std::vector<Gate_Cell> &a,
+                               const std::vector<Gate_Cell> &b){
+    assert (a.size() == b.size());
+    for (int i = 0; i < a.size(); i++){
+        if ( a[i] != b[i] && a[i] != Dont_Care &&  b[i] != Dont_Care){
+            return true;
+        }
+    }
+    return false;
+}
+
 std::string Model::Gate::display_str()
 {
     std::string ret = "";
@@ -140,7 +155,5 @@ std::string Model::Gate::display_str()
     }
     return ret;
 }
-
-
 
 #endif
