@@ -65,8 +65,8 @@ Model::Model(std::ifstream &blif_inp) {
         outputs = getVars(++vars_begin, vars_end);
       } else if ((*vars_begin).str() == ".names") {
         auto inputs = getVars(++vars_begin, vars_end);
-        auto output =
-            inputs.back(); // the last element of the var list is the output
+        // the last element of the var list is the output
+        auto output = inputs.back();
         std::vector<std::vector<Gate::Gate_Cell>> gateTable;
         inputs.pop_back();
         while (blif_inp.peek() != '.') {
@@ -134,17 +134,25 @@ std::vector<std::vector<int>> Model::Gate::xorGroups() {
   for (int i = 0; i < exprs.size(); i++) {
     for (int j = i + 1; j < exprs.size(); j++) {
       if (areExclusive(exprs[i], exprs[j])) {
-        // std::cout << "Edge from:\n" << display_str_expr(exprs[i]) <<
-        // std::endl << display_str_expr(exprs[j]) << std::endl;
         igraph_add_edge(&graph, i, j);
       }
     }
   }
   std::cout << "Vertices: " << igraph_vcount(&graph) << std::endl;
   std::cout << "Edges: " << igraph_ecount(&graph) << std::endl;
-  int cnum;
-  igraph_clique_number(&graph, &cnum);
-  std::cout << "Clique Number: " << cnum << std::endl;
+  igraph_vector_ptr_t res;
+  igraph_vector_ptr_init(&res, 10);
+  igraph_maximal_cliques(&graph, &res, -1, -1);
+  for (int i = 0; i < igraph_vector_ptr_size(&res); i++) {
+    auto clique = (igraph_vector_t *)VECTOR(res)[i];
+    std::cout << "Clique on :";
+    for (int j = 0; j < igraph_vector_size(clique); j++) {
+      std::cout << " " << VECTOR(*clique)[j];
+    }
+    std::cout << std::endl;
+  }
+  igraph_destroy(&graph);
+  igraph_vector_ptr_destroy(&res);
   std::vector<std::vector<int>> a;
   return a;
 }
