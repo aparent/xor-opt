@@ -67,8 +67,8 @@ Model::Model(std::ifstream &blif_inp) {
         auto inputs = getVars(++vars_begin, vars_end);
         // the last element of the var list is the output
         auto output = inputs.back();
-        std::vector<std::vector<Gate::Gate_Cell>> gateTable;
         inputs.pop_back();
+        std::vector<std::vector<Gate::Gate_Cell>> gateTable;
         while (blif_inp.peek() != '.') {
           std::getline(blif_inp, line);
           std::vector<Gate::Gate_Cell> gate_line;
@@ -87,7 +87,7 @@ Model::Model(std::ifstream &blif_inp) {
         gates.push_back(Gate(inputs, output, gateTable));
       }
     } else {
-      // std::cout << line << std::endl;
+        std::cout << "Error on line: " << line << std::endl;
     }
   }
 }
@@ -130,29 +130,30 @@ std::vector<std::vector<int>> Model::Gate::xorGroups() {
   assert(exprs.size() >= 1);
   igraph_t graph;
   igraph_empty(&graph, exprs.size(), IGRAPH_UNDIRECTED);
-  int edges = 0;
-  for (int i = 0; i < exprs.size(); i++) {
-    for (int j = i + 1; j < exprs.size(); j++) {
+  for (unsigned int i = 0; i < exprs.size(); i++) {
+    for (unsigned int j = i + 1; j < exprs.size(); j++) {
       if (areExclusive(exprs[i], exprs[j])) {
         igraph_add_edge(&graph, i, j);
       }
     }
   }
-  std::cout << "Vertices: " << igraph_vcount(&graph) << std::endl;
-  std::cout << "Edges: " << igraph_ecount(&graph) << std::endl;
-  igraph_vector_ptr_t res;
-  igraph_vector_ptr_init(&res, 10);
-  igraph_maximal_cliques(&graph, &res, -1, -1);
-  for (int i = 0; i < igraph_vector_ptr_size(&res); i++) {
-    auto clique = (igraph_vector_t *)VECTOR(res)[i];
+  while(igraph_vcount(&graph) > 0){
+    std::cout << "Vertices: " << igraph_vcount(&graph) << std::endl;
+    std::cout << "Edges: " << igraph_ecount(&graph) << std::endl;
+    igraph_vector_t res;
+    igraph_largest_single_clique(&graph, &res);
     std::cout << "Clique on :";
-    for (int j = 0; j < igraph_vector_size(clique); j++) {
-      std::cout << " " << VECTOR(*clique)[j];
+    for (int j = 0; j < igraph_vector_size(&res); j++) {
+      std::cout << " " << VECTOR(res)[j];
     }
+    struct igraph_vs_t verts;
+    verts.type = IGRAPH_VS_VECTOR;
+    verts.data.vecptr = &res;
+    igraph_delete_vertices(&graph,verts);
     std::cout << std::endl;
+    igraph_vector_destroy(&res);
   }
   igraph_destroy(&graph);
-  igraph_vector_ptr_destroy(&res);
   std::vector<std::vector<int>> a;
   return a;
 }
@@ -160,7 +161,7 @@ std::vector<std::vector<int>> Model::Gate::xorGroups() {
 bool Model::Gate::areExclusive(const std::vector<Gate_Cell> &a,
                                const std::vector<Gate_Cell> &b) {
   assert(a.size() == b.size());
-  for (int i = 0; i < a.size(); i++) {
+  for (unsigned int i = 0; i < a.size(); i++) {
     if (a[i] != b[i] && a[i] != Dont_Care && b[i] != Dont_Care) {
       return true;
     }
