@@ -12,7 +12,8 @@
 
 class Model {
 public:
-    Model(std::ifstream &); // Create model from blif input
+    Model(){} // Create model from blif input
+    bool parse_model(std::ifstream &blif_inp);
     std::string display_str();
     std::string getXorGroups();
     enum Gate_Cell { And, Negate_And, Dont_Care };
@@ -41,7 +42,8 @@ private:
     std::vector<std::string> getVars(std::sregex_iterator, std::sregex_iterator);
 };
 
-Model::Model(std::ifstream &blif_inp) {
+
+bool Model::parse_model(std::ifstream &blif_inp) {
     std::regex dotline_regex(R"([.].*)");
     std::regex var_regex("(\\S+)");
     std::regex wrapped_line_regex(R"(.*\\$)");
@@ -51,7 +53,7 @@ Model::Model(std::ifstream &blif_inp) {
         while (std::regex_match(line, wrapped_line_regex)) {
             auto temp = line;
             std::getline(blif_inp, line);
-            line = temp.substr(0, temp.length() - 2) + line; // -2 to remove the '\'
+            line = temp.substr(0, temp.length() - 2) + " " + line; // -2 to remove the '\'
         }
         if (std::regex_match(line, dotline_regex)) {
             auto vars_begin =
@@ -73,23 +75,31 @@ Model::Model(std::ifstream &blif_inp) {
                     std::getline(blif_inp, line);
                     std::vector<Gate_Cell> gate_line;
                     for (auto x : line) {
-                        if (x == ' ')
-                            break;
-                        if (x == '-')
+                        if (x == '-') {
                             gate_line.push_back(Dont_Care);
-                        if (x == '0')
+                        } else if (x == '0') {
                             gate_line.push_back(Negate_And);
-                        if (x == '1')
+                        } else if (x == '1') {
                             gate_line.push_back(And);
+                        } else {
+                          break;
+                        }
                     }
                     gateTable.push_back(gate_line);
                 }
                 gates.push_back(Gate(inputs, output, gateTable));
+            } else if (((*vars_begin).str() == ".end"))  {
+                return true;
+            } else {
+                std::cerr << "Not recognized " << (*vars_begin).str() << std::endl;
+                return false;
             }
         } else {
-            std::cout << "Error on line: " << line << std::endl;
+            std::cerr << "Error on line: " << line << std::endl;
+            return false;
         }
     }
+    return true;
 }
 
 std::vector<std::string> Model::getVars(std::sregex_iterator begin,
@@ -120,17 +130,15 @@ std::string Model::display_str() {
 
 std::string Model::getXorGroups() {
     for (auto &i : gates) {
-        std::cout << std::endl << "Clique set:" << std::endl;
         auto cliques = i.xorGroups();
         //Use results to reorder exprs
         std::vector<std::vector<Gate_Cell>> grouped_exprs;
+        //std::cerr << "Gate size: " << i.exprs.size() << std::endl;
+        //std::cerr << "Number of cliques: " << cliques.size() << std::endl;
         for (auto &j : cliques) {
-            std::cout << "Clique on: ";
             for (auto &k : j) {
-                std::cout << k <<" ";
                 grouped_exprs.push_back(i.exprs[k]);
             }
-            std::cout << std::endl;
         }
         i.exprs = grouped_exprs;
     }
@@ -172,6 +180,7 @@ std::vector<std::vector<int>> Model::Gate::xorGroups() {
         igraph_vector_destroy(&res);
     }
     igraph_destroy(&graph);
+    std::reverse(std::begin(result),std::end(result));
     return result;
 }
 

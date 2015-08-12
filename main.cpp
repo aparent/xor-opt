@@ -5,10 +5,16 @@
 using namespace std;
 
 int main(int argc, char** argv) {
-    ifstream input(argv[1]);
-    Model model(input);
-    cout << model.display_str() << endl;
-    model.getXorGroups();
-    cout << model.display_str() << endl;
+    for (int i = 1; i < argc; i++){
+      ifstream input(argv[i]);
+      Model model;
+      if ( model.parse_model(input) ){
+        model.getXorGroups();
+        ofstream file;
+        file.open("processed-blif/" + string(argv[i]));
+        file << model.display_str();
+        file.close();
+      }
+    }
     return 0;
 }
