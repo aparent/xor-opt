@@ -12,7 +12,7 @@
 
 class Model {
 public:
-    Model(){} // Create model from blif input
+    Model() {} // Create model from blif input
     bool parse_model(std::ifstream &blif_inp);
     std::string display_str();
     std::string getXorGroups();
@@ -82,7 +82,7 @@ bool Model::parse_model(std::ifstream &blif_inp) {
                         } else if (x == '1') {
                             gate_line.push_back(And);
                         } else {
-                          break;
+                            break;
                         }
                     }
                     gateTable.push_back(gate_line);
